@@ -62,6 +62,7 @@ In case the original annotation time stamps, tape information, year information,
 ## Generation of Overlapping Data Samples
 Based on the given training material, the first step involves a machine-driven fully-automated overlapping ground truth data generation for training the model. For this purpose it is necessary to provide the input data (audio files as ".wav" format) within the following data structure.
 
+```
 ├── Input Folder (see --input_dir option below)
 │   ├── CategoryA
 │   │   ├── categoryA-XXX_ID_YEAR_TAPENAME_STARTTIME_ENDTIME.wav
@@ -83,6 +84,7 @@ Based on the given training material, the first step involves a machine-driven f
 │   │   ├── Garbage-XXX_ID_YEAR_TAPENAME_STARTTIME_ENDTIME.wav
 │   │   ├── Garbage-XXX_ID_YEAR_TAPENAME_STARTTIME_ENDTIME.wav
 │   │   ├── (...)
+```
 
 Each class-specific content has to be stored within a separate sub-folder within the acutal input directory path. The name of the sub-folders have to be coherent with the "LABEL" of all corresponding filenames below. The filename structure has to follow the descriptions within the previous chapter (see <em>Required Filename Structure for Training</em>). Independent of the training dataset, each corpus has to have an additional <em>Garbage</em> class, modelling all events (e.g. noise, unkown call patterns, etc.) which can not be assigned to a specific category.
 
@@ -92,6 +94,7 @@ Once the animal-specific dataset is ready following the above directory- and fil
 
 In a first step, the module will set up the same directory structre as shown above, as provided via the <em>--data_output_dir</em> option and generates for every given audio file (.wav) the corresponding spectrogram, according to the chosen options (fft-size, step-size, sampling rate, & sequence length -- see <em>generate_overlap_dataset.py -h</em>). Each category-specific spectrogram will be stored as pickle file within the respective sub-directory of the selected <em>--data_ouptut_dir</em> option. The initial spectrogram generation provides also the functionality of signal denoising/enhancement, by using the <em>--denoiser</em> option, togehter with a previously trained ORCA-CLEAN model stored as pickle file (see ORCA-CLEAN https://github.com/ChristianBergler/ORCA-CLEAN). If the <em>--denoiser</em> option is not in use, the original noisy data samples will be used.
 
+```
 ├── Output Folder (see --data_ouptut_dir option below)
 │   ├── CategoryA
 │   │   ├── categoryA-XXX_ID_YEAR_TAPENAME_STARTTIME_ENDTIME.wav.p
@@ -102,6 +105,7 @@ In a first step, the module will set up the same directory structre as shown abo
 │   │   ├── categoryB-XXX_ID_YEAR_TAPENAME_STARTTIME_ENDTIME.wav.
 │   │   ├── (...)
 (...)
+```
 
 Once the entire audio (.wav) pool has been converted into spectrograms, the final overlapping ground truth data will be generated. According to the selected number of overlapping samples per cateogry (see option <em>--number_per_label</em>), together with the respective data split (default: 70% training, 15% validation, 15% test), the final overlapping signals will be machine-generated for each combination. The combinatorial complexity can be calculated as follows: N = number of classes, K = 2 = overlapping signals, consist always two spectrograms ---> [N over K + (N-1) + (N-1)] x number_per_label. Every category-based combination, plus every class with itself except the garbage class, plus every class without any overlap except the garbage class. According to the ORCA-PARTY paper K=8, N=2 --> [8 over 2 + (8-1) + (8-1)] x 2,000 = [28 + 7 + 7] x 2,000 = 84,000 overlapping signals. IMPORTANT: the total amount of samples per category, has to be equal or larger than the chosen fraction-specific number of overlapping events per label (see option <em>--number_per_label</em>). If this is not the case all overlapping events involving this specific category will be skipped/ignored (e.g. 2,000 overlapping samples -> 70% in train = 1,400 samples, so each category-specific datapool has to be larger than this number).
 
