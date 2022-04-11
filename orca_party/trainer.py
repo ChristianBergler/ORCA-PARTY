@@ -231,14 +231,15 @@ class Trainer:
             for j, (lab1, lab2) in enumerate(zip(l1, l2)):
 
                 lab1 = lab1.split("_")[0]
-                if lab2 != "":
+                if lab2 != "self-zero":
                     lab2 = lab2.split("_")[0]
+
 
                 #vocalization type with itself
                 if lab1 == lab2:
                     ground_truth[j][self.classes.index(lab1)] = f1_cut[j]
                 #vocalization without overlap, only shifted in time
-                elif lab2 == "":
+                elif lab2 == "self-zero":
                     ground_truth[j][self.classes.index(lab1)] = f1_cut[j]
                 #two overlapping vocalization types
                 else:
@@ -331,14 +332,14 @@ class Trainer:
                 for j, (lab1, lab2) in enumerate(zip(l1, l2)):
 
                     lab1 = lab1.split("_")[0]
-                    if lab2 != "":
+                    if lab2 != "self-zero":
                         lab2 = lab2.split("_")[0]
 
                     # vocalization type with itself
                     if lab1 == lab2:
                         ground_truth[j][self.classes.index(lab1)] = f1_cut[j]
                     # vocalization without overlap, only shifted in time
-                    elif lab2 == "":
+                    elif lab2 == "self-zero":
                         ground_truth[j][self.classes.index(lab1)] = f1_cut[j]
                     # two overlapping vocalization types
                     else:

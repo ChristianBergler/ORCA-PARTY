@@ -110,6 +110,7 @@ def build_dataset(
 
     else:
         logger.info("No pre-trained denoising model! Running with noisy spectrograms!")
+        denoiser_model = None
 
     audio_files = sorted([os.path.join(input_dir, f) for f in os.listdir(input_dir)])
 
