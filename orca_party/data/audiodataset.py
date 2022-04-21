@@ -401,7 +401,6 @@ class StridedAudioDataset(FileNameDataset):
             )
             self._logger.debug("Init 0/1-dB-normalization activated")
 
-
     def __len__(self):
         full_frames = max(int(ceil((self.n_frames + 1 - self.sequence_len) / self.hop)), 1)
         if (full_frames * self.sequence_len) < self.n_frames:
@@ -460,16 +459,15 @@ class SingleAudioFolder(AudioDataset):
         if self.dataset_name is not None:
             self._logger.info("Init dataset {}...".format(self.dataset_name))
 
-        self.sp = signal.signal_proc()
-
         self.sr = sr
         self.f_min = f_min
         self.f_max = f_max
         self.n_fft = n_fft
         self.center = center
         self.hop_length = hop_length
-        self.sp = signal.signal_proc()
         self.freq_compression = freq_compression
+
+        self.sp = signal.signal_proc()
 
         valid_freq_compressions = ["linear", "mel", "mfcc"]
 
@@ -562,6 +560,8 @@ class Dataset(AudioDataset):
         orca_detection=False,
         perc_of_max_signal=1.0,
         min_max_normalize=False,
+        min_thres_detect=0.05,
+        max_thres_detect=0.40,
         freq_compression="linear",
         min_level_db=DefaultSpecDatasetOps["min_level_db"],
         ref_level_db=DefaultSpecDatasetOps["ref_level_db"],
@@ -572,6 +572,7 @@ class Dataset(AudioDataset):
         super().__init__(file_names, working_dir, sr, *args, **kwargs)
 
         self.cuda = cuda
+        self.n_fft = n_fft
         self.f_min = f_min
         self.f_max = f_max
         self.seq_len = seq_len
@@ -579,6 +580,8 @@ class Dataset(AudioDataset):
         self.augmentation = augmentation
         self.denoiser_model = denoiser_model
         self.orca_detection = orca_detection
+        self.min_thres_detect = min_thres_detect
+        self.max_thres_detect = max_thres_detect
         self.freq_compression = freq_compression
         self.min_max_normalize = min_max_normalize
         self.perc_of_max_signal = perc_of_max_signal
@@ -624,7 +627,6 @@ class Dataset(AudioDataset):
                 self.t_addnoise = None
                 self._logger.debug("Running without random noise augmentation")
 
-
         self.t_compr_a = T.Amp2Db(min_level_db=DefaultSpecDatasetOps["min_level_db"])
 
         if self.min_max_normalize:
@@ -657,36 +659,47 @@ class Dataset(AudioDataset):
             sample = self.t_pitchshift(sample)
             sample = self.t_timestretch(sample)
 
+        # Fixed temporal context
+        if self.orca_detection:
+            # Only padding
+            sample = self.t_subseq(sample)
+            sample_orca_detect = sample.clone()
+            sample_orca_detect = self.t_compr_a(sample_orca_detect)
+            sample_orca_detect = self.t_norm(sample_orca_detect)
+            # Subsampling
+            sample, _ = self.sp.detect_strong_spectral_region(spectrogram=sample_orca_detect, spectrogram_to_extract=sample, n_fft=self.n_fft, target_len=self.seq_len, perc_of_max_signal=self.perc_of_max_signal, min_bin_of_interest=int(self.min_thres_detect * sample_orca_detect.shape[-1]), max_bin_of_inerest=int(self.max_thres_detect * sample_orca_detect.shape[-1]))
+        else:
+            # Pad or subsample the input if necessary
+            sample = self.t_subseq(sample)
+
+        # Randomly select from a pool of given spectrograms from the strongest regions
+        if isinstance(sample, list):
+            sample = random.choice(sample).unsqueeze(dim=0)
+
+        # Frequency compression
         sample = self.t_compr_f(sample)
 
         # Noise Augmentation
         if self.augmentation and self.t_addnoise is not None:
             sample, _ = self.t_addnoise(sample)
 
+        # Decibel spectrogram
         sample = self.t_compr_a(sample)
 
+        # Normalization
         sample = self.t_norm(sample)
-
-        if self.orca_detection:
-            sample = self.t_subseq(sample)
-            sample, _ = self.sp.detect_strong_spectral_region(spectrogram=sample, perc_of_max_signal=self.perc_of_max_signal)
-        else:
-            # Pad or subsample the input if necessary
-            sample = self.t_subseq(sample)
-
-        if isinstance(sample, list):
-            sample = sample[0]
 
         label = self.load_label(file)
 
         sample = sample.unsqueeze(dim=0)
 
-        if self.denoiser_model is not None:
-            if torch.cuda.is_available() and self.cuda:
-                input = sample.cuda()
-                sample = self.denoiser_model(input.unsqueeze(0)).cpu()
-            else:
-                sample = self.denoiser_model(sample.unsqueeze(0)).cpu()
+        with torch.no_grad():
+            if self.denoiser_model is not None:
+                if torch.cuda.is_available() and self.cuda:
+                    input = sample.cuda()
+                    sample = self.denoiser_model(input).cpu()
+                else:
+                    sample = self.denoiser_model(sample).cpu()
 
             sample = sample.squeeze(0)
 

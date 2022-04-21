@@ -5,7 +5,6 @@ License: GNU General Public License v3.0
 Institution: Friedrich-Alexander-University Erlangen-Nuremberg, Department of Computer Science, Pattern Recognition Lab
 Last Access: 03.03.2022
 """
-
 import cv2
 import math
 import torch
@@ -33,12 +32,12 @@ class signal_proc(object):
     def __init__(self):
         pass
 
-    """ Convert numpy array to pytorch tensor  """
+    """ Convert numpy array to pytorch tensor """
     def np_array_to_tensor(self, audio_data):
         audio_data = torch.from_numpy(audio_data).float().t()
         return audio_data
 
-    """ Calculate mean of specific frequency range without considering zero-elements  """
+    """ Calculate mean of specific frequency range without considering zero-elements """
     def get_mean_from_to(self, power_spectrogram, min_freq_bin, max_freq_bin):
         sub_power_spec = power_spectrogram.clone()
         part_of_spec = sub_power_spec[:, min_freq_bin:max_freq_bin]
@@ -50,7 +49,7 @@ class signal_proc(object):
             mean_part_of_spec = 0
         return mean_part_of_spec
 
-    """ Calculate number of non-zero elements in tensor  """
+    """ Calculate number of non-zero elements in tensor """
     def get_non_zero_elements_tensor(self, input_tensor):
         non_zero_elements = 0
         for element in input_tensor:
@@ -77,7 +76,7 @@ class signal_proc(object):
         sub_power_spec[:, min_freq_bin:max_freq_bin] = part_of_spec
         return sub_power_spec
 
-    """ Morphological operations on a certain frequency range of the original spectrogram  """
+    """ Morphological operations on a certain frequency range of the original spectrogram """
     def morph_val_from_to(self, power_spectrogram, min_freq_bin, max_freq_bin, kernel_sizex, kernel_sizey, type):
         types = {"erode" : cv2.MORPH_ERODE, "dilate" : cv2.MORPH_DILATE,  "close" : cv2.MORPH_CLOSE, "open" : cv2.MORPH_OPEN}
         respective_type = types.get(type)
@@ -94,7 +93,7 @@ class signal_proc(object):
         image_max = self.np_array_to_tensor(image_max)
         return image_max
 
-    """ Clear DC-part of a spectrogram  """
+    """ Clear DC-part of a spectrogram """
     def clear_spec_dc_part(self, power_spectrogram, up_to_bin=50):
         power_spec_clean_dc = power_spectrogram.clone().squeeze().transpose(1, 0)
         n_freq_bins = power_spec_clean_dc[0, :]
@@ -113,7 +112,7 @@ class signal_proc(object):
         power_spec_hard_clean = power_spec_hard_clean.transpose(0, 1)
         return power_spec_hard_clean
 
-    """ Clear spectral values smaller a certain threshold  """
+    """ Clear spectral values smaller a certain threshold """
     def clear_values_smaller_threshold(self, power_spectrogram, threshold=None):
         if not threshold:
             non_zero_elements_in_spec = self.get_non_zero_elements_tensor(power_spectrogram)
@@ -148,7 +147,7 @@ class signal_proc(object):
             spectrogram = spectrogram.transpose(0, 1)
             return spectrogram
 
-    """ Extract spectrogram based on start and end times  """
+    """ Extract spectrogram based on start and end times """
     def extract_spec(self, spectrogram, start, end, target_len):
         if start is None and end is None:
             return self.pad(spectrogram, target_len)
@@ -160,7 +159,7 @@ class signal_proc(object):
             return torch.index_select(spectrogram, 0, torch.arange(start, end, dtype=torch.long))
 
     """ Identifying spectral strong intensity regions based on a give target length of the original spectrogram (sliding winodw approach, intensity curve, peak picking) """
-    def identify_orca(self, spectrogram, power_spec_max, target_len=128, perc_of_max_signal=1.0):
+    def identify_orca(self, spectrogram, power_spec_max, target_len=128, perc_of_max_signal=1.0, min_bin_of_interest=100, max_bin_of_inerest=750):
         signals = dict()
         if spectrogram.shape[0] > target_len:
             start = 0
@@ -168,7 +167,7 @@ class signal_proc(object):
             while end < spectrogram.shape[0]:
                 spec_to_identify = torch.index_select(power_spec_max, 0, torch.arange(start, end, dtype=torch.long))
                 spec_to_identify = spec_to_identify.transpose(0, 1)
-                signal_strength = torch.sum(spec_to_identify[100:750, :])
+                signal_strength = torch.sum(spec_to_identify[min_bin_of_interest:max_bin_of_inerest, :])
                 signals[end] = signal_strength.item()
                 start = start + 1
                 end = start + target_len
@@ -179,10 +178,10 @@ class signal_proc(object):
 
             if peaks.size > 0:
                 times = []
-                peaks = [x for _, x in sorted(zip(peak_dict["peak_heights"], peaks), reverse=True)]
 
                 if perc_of_max_signal == 1.0:
-                    times.append((time[0] - target_len, time[0]))
+                    max_idx = np.argmax(signal_strengths[peaks])
+                    times.append((time[peaks[max_idx]] - target_len, time[peaks[max_idx]]))
                     return times
 
                 for p in peaks:
@@ -193,13 +192,22 @@ class signal_proc(object):
             else:
                 return [(time[np.argmax(signal_strengths)] - target_len, time[np.argmax(signal_strengths)])]
         else:
-            return [(0, 128)]
+            return [(0, target_len)]
 
-    """ Detection algorithm of spectral strong intensity regions (vocalization areas)  """
-    def detect_strong_spectral_region(self, spectrogram, min_bin_of_interest=100, max_bin_of_inerest=750, exp_non_linearity=10, threshold=0.5, moving_avg_bin=50, morph_max_bin_of_interest=250, nfft=4096, kernel_sizes=[9, 3, 5], target_len=128, perc_of_max_signal=1.0):
+    """ Detection algorithm of spectral strong intensity regions (vocalization areas) """
+    def detect_strong_spectral_region(self, spectrogram, spectrogram_to_extract, min_bin_of_interest=100, max_bin_of_inerest=750, exp_non_linearity=10, threshold=0.5, n_fft=4096, kernel_sizes=[9, 3, 5], target_len=128, perc_of_max_signal=1.0):
         spectrogram = spectrogram.squeeze(dim=0)
 
-        max_bin = math.floor(nfft / 2) + 1
+        spectral_bins = max_bin_of_inerest-min_bin_of_interest
+
+        moving_avg_bin = int(0.1 * spectral_bins)
+        if moving_avg_bin > 50:
+            moving_avg_bin = 50
+
+        morph_max_bin_of_interest = int(0.35 * spectral_bins)
+
+        max_bin = math.floor(n_fft / 2) + 1
+
         final_spec = torch.zeros([spectrogram.shape[0], spectrogram.shape[1]])
 
         power_clear = self.search_maxima_spec(spectrogram, radius=kernel_sizes[1])
@@ -216,8 +224,7 @@ class signal_proc(object):
         power_clear = self.clear_spec_min_to_max_freq(max_bin_of_inerest, upper_bound, power_clear)
         power_clear = self.clear_spec_min_to_max_freq(0, min_bin_of_interest, power_clear)
 
-        power_clear = self.insert_non_linearity(power_clear, min_freq_bin=min_bin_of_interest,
-                                                max_freq_bin=max_bin_of_inerest, exponent=exp_non_linearity)
+        power_clear = self.insert_non_linearity(power_clear, min_freq_bin=min_bin_of_interest, max_freq_bin=max_bin_of_inerest, exponent=exp_non_linearity)
 
         power_clear = self.clear_values_smaller_threshold(power_spectrogram=power_clear, threshold=threshold)
 
@@ -225,23 +232,24 @@ class signal_proc(object):
         for cur_pos in range(min_bin_of_interest, max_bin_of_inerest, bin_range):
             cur_spec = self.clear_spec_min_to_max_freq(cur_pos + bin_range, max_bin, power_clear)
             cur_spec = self.clear_spec_dc_part(cur_spec, up_to_bin=cur_pos)
-            cur_spec = self.clear_val_from_to(cur_spec, cur_pos, cur_pos + bin_range,
-                                              self.get_mean_from_to(cur_spec, cur_pos, cur_pos + bin_range), weight=1,
-                                              substract=False)
+            cur_spec = self.clear_val_from_to(cur_spec, cur_pos, cur_pos + bin_range, self.get_mean_from_to(cur_spec, cur_pos, cur_pos + bin_range), weight=1, substract=False)
             final_spec += cur_spec.clone()
 
-        power_clear = self.morph_val_from_to(final_spec, min_bin_of_interest, morph_max_bin_of_interest,
-                                             kernel_sizes[0], kernel_sizes[1], "erode")
+        power_clear = self.morph_val_from_to(final_spec, min_bin_of_interest, morph_max_bin_of_interest, kernel_sizes[0], kernel_sizes[1], "erode")
 
         power_clear = torch.tensor(ndi.median_filter(power_clear.numpy(), size=kernel_sizes[2]))
 
         # identify spectral orca parts
-        times = self.identify_orca(spectrogram.squeeze(dim=0), power_clear, perc_of_max_signal=perc_of_max_signal)
+        times = self.identify_orca(spectrogram.squeeze(dim=0), power_clear, perc_of_max_signal=perc_of_max_signal, min_bin_of_interest=min_bin_of_interest, max_bin_of_inerest=max_bin_of_inerest)
 
         # extract spec
         target_specs = []
-        for start_t, end_t in times:
-            target_specs.append(self.extract_spec(spectrogram, start_t, end_t, target_len))
+        if spectrogram_to_extract is not None:
+            for start_t, end_t in times:
+                target_specs.append(self.extract_spec(spectrogram_to_extract.squeeze(dim=0), start_t, end_t, target_len))
+        else:
+            for start_t, end_t in times:
+                target_specs.append(self.extract_spec(spectrogram, start_t, end_t, target_len))
 
         return target_specs, times
 

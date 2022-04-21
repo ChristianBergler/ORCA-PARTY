@@ -181,7 +181,6 @@ parser.add_argument(
     help="The path to the automatic generated class.info file, build by the generate_overlap_dataset.py.",
 )
 
-
 """ Input parameters """
 ARGS = parser.parse_args()
 ARGS.cuda = torch.cuda.is_available() and ARGS.cuda

@@ -85,8 +85,10 @@ def build_dataset(
         min_level_db=-100,
         sequence_len=1280,
         augmentation=False,
+        min_thres_detect=0.05,
+        max_thres_detect=0.40,
         min_max_normalize=False,
-        freq_compression="linear"
+        freq_compression="linear",
 ):
 
     if denoiser is not None:
@@ -135,6 +137,8 @@ def build_dataset(
         ref_level_db=ref_level_db,
         augmentation=augmentation,
         denoiser_model=denoiser_model,
+        min_thres_detect=min_thres_detect,
+        max_thres_detect=max_thres_detect,
         freq_compression=freq_compression,
         min_max_normalize=min_max_normalize
     )
@@ -610,6 +614,27 @@ if __name__ == "__main__":
         help="Initial building of stand-alone spectrograms for subsequent overlap generation is not performed.",
     )
 
+    parser.add_argument(
+        "--perc_of_max_signal",
+        type=float,
+        default=1.0,
+        help="The percentage multiplied with the maximum signal strength resulting in the target height for the maximum intensity peak picking orca detection algorithm.",
+    )
+
+    parser.add_argument(
+        "--min_thres_detect",
+        type=float,
+        default=0.05,
+        help="Minimum/Lower value (percentage) for the embedded peak finding algorithm to calculate the minimum frequency bin (n_fft/2+1 * min_thres_detect = min_freq_bin) in order to robustly calculate signal strength within a min_freq_bin and max_freq_bin range to extract a fixed temporal context from longer vocal events. For the orca detection.",
+    )
+
+    parser.add_argument(
+        "--max_thres_detect",
+        type=float,
+        default=0.40,
+        help="Maximum/Upper value (percentage) for the embedded peak finding algorithm to calculate the maximum frequency bin (n_fft/2+1 * max_thres_detect = max_freq_bin) in order to robustly calculate signal strength within a min_freq_bin and max_freq_bin range to extract a fixed temporal context from longer vocal events. For the orca detection.",
+    )
+
     ARGS = parser.parse_args()
 
     ARGS.cuda = torch.cuda.is_available() and ARGS.cuda
@@ -645,30 +670,36 @@ if __name__ == "__main__":
     min_max_norm = ARGS.min_max_norm
     augmentation = ARGS.augmentation
     only_overlap = ARGS.only_overlap
+    min_thres_detect = ARGS.min_thres_detect
+    max_thres_detect = ARGS.max_thres_detect
+    perc_of_max_signal = ARGS.perc_of_max_signal
 
-    log.info(f"Input Directory: {ARGS.input_dir}")
-    log.info(f"Directory where the pickle files (generated spectrograms) for each data sample are saved: {ARGS.data_output_dir}")
-    log.info(f"Directory where the final machine-generated overlapped signals are saved as pickle: {ARGS.target_path}")
-    log.info(f"Directory where the final overlapped spectrograms are saved as images for visual inspection: {ARGS.visualization_dir}")
-    log.info(f"Directory of the Logging Output: {ARGS.log_dir}")
-    log.info(f"Directory including noise files for noise augmentation: {ARGS.noise_dir}")
-    log.info(f"Path to the denoising model (e.g. ORCA-CLEAN.pk): {ARGS.denoiser}")
-    log.info(f"Number of machine-generated overlapping signals for each label: {ARGS.number_per_label}")
-    log.info(f"Do not use cuda to apply the denoising model: {ARGS.no_cuda}")
-    log.info(f"Directory with noise files for additional noise augmentation: {ARGS.noise_dir}")
-    log.info(f"Frequency compression: {ARGS.freq_compression}")
-    log.info(f"Spectrogram sequence length: {ARGS.sequence_len}")
-    log.info(f"Number of frequency bins: {ARGS.n_freq_bins}")
-    log.info(f"Number of FFT window in samples: {ARGS.n_fft}")
-    log.info(f"Number of HOP length in samples: {ARGS.hop_length}")
-    log.info(f"Sampling Rate: {ARGS.sr}")
-    log.info(f"Minimum frequency represented within spectrogram: {ARGS.fmin}")
-    log.info(f"Maximum frequency represented within spectrogram: {ARGS.fmax}")
-    log.info(f"Minimum dB-value for normalization: {ARGS.minDB}")
-    log.info(f"Reference dB-value for normalization: {ARGS.refDB}")
-    log.info(f"Min-Max-Normalization activated: {ARGS.min_max_norm}")
-    log.info(f"Spectrogram augmentation: {ARGS.augmentation}")
-    log.info(f"Initial building of stand-alone spectrograms for subsequent overlap generation is not performed: {ARGS.only_overlap}")
+    log.info(f"Input Directory: {input_dir}")
+    log.info(f"Directory where the pickle files (generated spectrograms) for each data sample are saved: {data_output_dir}")
+    log.info(f"Directory where the final machine-generated overlapped signals are saved as pickle: {target_path}")
+    log.info(f"Directory where the final overlapped spectrograms are saved as images for visual inspection: {visualization_dir}")
+    log.info(f"Directory of the Logging Output: {log_dir}")
+    log.info(f"Directory including noise files for noise augmentation: {noise_dir}")
+    log.info(f"Path to the denoising model (e.g. ORCA-CLEAN.pk): {denoiser}")
+    log.info(f"Number of machine-generated overlapping signals for each label: {number_per_label}")
+    log.info(f"Do not use cuda to apply the denoising model: {no_cuda}")
+    log.info(f"Directory with noise files for additional noise augmentation: {noise_dir}")
+    log.info(f"Frequency compression: {freq_compression}")
+    log.info(f"Spectrogram sequence length: {sequence_len}")
+    log.info(f"Number of frequency bins: {n_freq_bins}")
+    log.info(f"Number of FFT window in samples: {n_fft}")
+    log.info(f"Number of HOP length in samples: {hop_length}")
+    log.info(f"Sampling Rate: {sr}")
+    log.info(f"Minimum frequency represented within spectrogram: {fmin}")
+    log.info(f"Maximum frequency represented within spectrogram: {fmax}")
+    log.info(f"Minimum dB-value for normalization: {minDB}")
+    log.info(f"Reference dB-value for normalization: {refDB}")
+    log.info(f"Min-Max-Normalization activated: {min_max_norm}")
+    log.info(f"Spectrogram augmentation: {augmentation}")
+    log.info(f"Initial building of stand-alone spectrograms for subsequent overlap generation is not performed: {only_overlap}")
+    log.info(f"Percentage of the Maximum Signal Strength a Signal Needs to Have to be Cut Out. For the Orca Detection: {perc_of_max_signal}")
+    log.info(f"Minimum/Lower value (percentage) for the embedded peak finding algorithm to calculate intensity between min_freq_bin and max_freq_bin (n_fft/2+1 * min_thres_detect = min_freq_bin). For the Orca Detection: {min_thres_detect}")
+    log.info(f"Maximum/Upper value (percentage) for the embedded peak finding algorithm to calculate intensity between min_freq_bin and max_freq_bin (n_fft/2+1 * max_thres_detect = max_freq_bin). For the Orca Detection: {max_thres_detect}")
 
     """
     noise files for augmentation
@@ -697,9 +728,8 @@ if __name__ == "__main__":
 
             build_dataset(input_dir=sub_input_dir, data_output_dir=data_output_dir_class_specific, denoiser=denoiser, logger=log, cuda=cuda,
                           sr=sr, fmin=fmin, fmax=fmax, n_fft=n_fft, noise_files=noise_files, hop_length=hop_length, n_freq_bins=n_freq_bins,
-                          ref_level_db=refDB, min_level_db=minDB, sequence_len=sequence_len, min_max_normalize=min_max_norm,
-                          freq_compression=freq_compression, augmentation=augmentation)
-
+                          ref_level_db=refDB, min_level_db=minDB, sequence_len=sequence_len, min_max_normalize=min_max_norm, freq_compression=freq_compression,
+                          augmentation=augmentation, min_thres_detect=min_thres_detect, max_thres_detect=max_thres_detect)
     """
     generating data split 
     """
@@ -708,6 +738,6 @@ if __name__ == "__main__":
     """
     generating spectral overlapping pairs of spectrograms according to the given (labeled) input data, save & store pickle, as well as data split .csv files
     """
-    generate_overlapping_data(datasplit=datasplit, split_fracs=split_frac, data_output_dir=data_output_dir, target_path=target_path, number_per_label=num_per_label, spec_time_dim=spec_time_dim, spec_freq_dim=spec_freq_dim, logger=log, dataOpts=dataOpts, visualization_dir=visualization_dir, offset_max=64)
+    generate_overlapping_data(datasplit=datasplit, split_fracs=split_frac, data_output_dir=data_output_dir, target_path=target_path, number_per_label=num_per_label, spec_time_dim=spec_time_dim, spec_freq_dim=spec_freq_dim, logger=log, dataOpts=dataOpts, visualization_dir=visualization_dir, offset_max=int(spec_time_dim/2))
 
     log.close()
