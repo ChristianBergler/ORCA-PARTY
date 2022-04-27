@@ -3,7 +3,7 @@ Module: logging.py
 Authors: Christian Bergler, Manuel Schmitt
 License: GNU General Public License v3.0
 Institution: Friedrich-Alexander-University Erlangen-Nuremberg, Department of Computer Science, Pattern Recognition Lab
-Last Access: 03.03.2022
+Last Access: 26.04.2022
 """
 
 import os

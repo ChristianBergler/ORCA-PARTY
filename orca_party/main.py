@@ -4,7 +4,7 @@ Module: main.py
 Authors: Christian Bergler, Manuel Schmitt
 License: GNU General Public License v3.0
 Institution: Friedrich-Alexander-University Erlangen-Nuremberg, Department of Computer Science, Pattern Recognition Lab
-Last Access: 03.03.2022
+Last Access: 26.04.2022
 """
 
 import os
@@ -299,7 +299,7 @@ if __name__ == "__main__":
     log.info(f"Directory of all the Summaries: {summary_dir}")
     log.info(f"Directory of the Logging Output: {log_dir}")
     log.info(f"Directory of the Cached Output: {cache_dir}")
-    log.info(f"Directory of the Cached Output: {checkpoint_dir}")
+    log.info(f"Directory of the Checkpoint Output: {checkpoint_dir}")
     log.info(f"Directory of the Final Model (.pk): {model_dir}")
     log.info(f"Number of Workers during Data Loading: {num_workers}")
     log.info(f"Initial Learning Rate: {ARGS.lr}")
@@ -315,7 +315,7 @@ if __name__ == "__main__":
     log.info(f"Class Info File including Number and Labels of each Class: {class_info}")
     log.info(f"Starts Model Training from Scratch or Existing Checkpoint: {start_from_scratch}")
 
-    prefix = "orca-party"
+    prefix = "ORCA-PARTY"
 
     device = torch.device("cuda") if ARGS.cuda else torch.device("cpu")
 

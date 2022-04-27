@@ -26,8 +26,7 @@ GNU GENERAL PUBLIC LICENSE, Version 3, 29 June 2007 (GNU GPLv3)
 Manuscript Title: <em>ORCA-PARTY: An Automatic Killer Whale Sound Type Separation Toolkit Using Deep Learning</em>. Within the <em>docs/audiovisual_data</em> folder several audio examples of various overlapping killer whale signals and corresponding spectral visualizations (spectrograms) are stored. All examples belong to the unseen <em>ORCA-PARTY Overlapping Dataset (OPOD)</em> test set mentioned in our manuscript.
 
 ## Python, Python Libraries, and Version
-ORCA-PARTY is a deep learning algorithm which was implemented in Python (Version=3.8) (Operating System: Linux) together with the deep learning framework PyTorch (Version=1.8.1, TorchVision=0.9.1, TorchAudio=0.8.1). Moreover it requires the following Python libraries: Pillow, MatplotLib, Librosa, TensorboardX, Soundfile, Scikit-image, Six, Resampy, Opencv-python (recent versions). ORCA-PARTY is currently compatible with Python 3.8 and PyTorch (Version=1.9.0, TorchVision=0.10.0, TorchAudio=0.9.0)
-
+ORCA-PARTY is a deep learning algorithm which was implemented in Python (Version=3.8) (Operating System: Linux) together with the deep learning framework PyTorch (Version=1.8.1, TorchVision=0.9.1, TorchAudio=0.8.1). Moreover it requires the following Python libraries: Pillow, MatplotLib, Librosa, TensorboardX, Soundfile, Scikit-image, Six, Resampy, Opencv-python (recent versions). ORCA-PARTY is currently compatible with Python 3.8 and PyTorch (Version=1.11.0+cu113/cpu, TorchVision=0.12.0+cu113/cpu, TorchAudio=0.11.0+cu113/cpu).
 ## Required Filename Structure for Training
 In order to properly load and preprocess your data to train the network you need to prepare the filenames of your audio data clips to fit the following template/format:
 

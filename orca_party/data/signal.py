@@ -3,7 +3,7 @@ Module: signal.py
 Authors: Christian Bergler, Manuel Schmitt
 License: GNU General Public License v3.0
 Institution: Friedrich-Alexander-University Erlangen-Nuremberg, Department of Computer Science, Pattern Recognition Lab
-Last Access: 03.03.2022
+Last Access: 26.04.2022
 """
 import cv2
 import math
@@ -159,7 +159,7 @@ class signal_proc(object):
             return torch.index_select(spectrogram, 0, torch.arange(start, end, dtype=torch.long))
 
     """ Identifying spectral strong intensity regions based on a give target length of the original spectrogram (sliding winodw approach, intensity curve, peak picking) """
-    def identify_orca(self, spectrogram, power_spec_max, target_len=128, perc_of_max_signal=1.0, min_bin_of_interest=100, max_bin_of_inerest=750):
+    def identify(self, spectrogram, power_spec_max, target_len=128, perc_of_max_signal=1.0, min_bin_of_interest=100, max_bin_of_inerest=750):
         signals = dict()
         if spectrogram.shape[0] > target_len:
             start = 0
@@ -240,7 +240,7 @@ class signal_proc(object):
         power_clear = torch.tensor(ndi.median_filter(power_clear.numpy(), size=kernel_sizes[2]))
 
         # identify spectral orca parts
-        times = self.identify_orca(spectrogram.squeeze(dim=0), power_clear, perc_of_max_signal=perc_of_max_signal, min_bin_of_interest=min_bin_of_interest, max_bin_of_inerest=max_bin_of_inerest)
+        times = self.identify(spectrogram.squeeze(dim=0), power_clear, perc_of_max_signal=perc_of_max_signal, min_bin_of_interest=min_bin_of_interest, max_bin_of_inerest=max_bin_of_inerest)
 
         # extract spec
         target_specs = []
