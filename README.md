@@ -5,18 +5,16 @@ ORCA-PARTY: An Automatic Killer Whale Sound Type Separation Toolkit Using Deep L
 ORCA-PARTY, is a deep sound type separation network designed for separation of overlapping (bioacoustic) killer whale (<em>Orcinus Orca</em>) vocalization types, not requiring any human-annotated overlapping ground truth data, irrespective of speaker, sound source location, and recording conditions, in order to enhance downstream sound type recognition. <br>ORCA-PARTY was trained exclusively on overlapping killer whale signals of 7 known vocalization types plus a "unknown" category (8 classes), resulting in a significant signal enhancement and improvement of subsequent vocalization type classification. To show and prove the transferability, robustness and generalization of ORCA-PARTY even more, deep sound type separation was also conducted for bird sounds (<em>Myiopsitta monachus</em>).<br><br>
 
 ## Reference
-If ORCA-PARTY is used for your own research please cite the following publication: ORCA-PARTY: An Automatic Killer Whale Sound Type Separation Toolkit Using Deep Learning (tbd)
+If ORCA-PARTY is used for your own research please cite the following publication: ORCA-PARTY: An Automatic Killer Whale Sound Type Separation Toolkit Using Deep Learning:
 
 ```
-@inproceedings{Bergler-OP-2022,
-  author={Christian Bergler, Manuel Schmitt, Maier Andreas, Rachael Xi Cheng, Volker Barth, Elmar Nöth},
-  title={ORCA-PARTY: An Automatic Killer Whale Sound Type Separation Toolkit Using Deep Learning},
-  year = {2022},
-  month = {May}
-  booktitle = {International Conference on Acoustics, Speech, and Signal Processing, Proceedings (ICASSP)},
-  pages={tbd},
-  doi={tbd},
-  url={tbd}
+@inproceedings{BerglerPARTY:2022,
+  author={Bergler, Christian and Schmitt, Manuel and Maier, Andreas and Cheng, Rachael Xi and Barth, Volker and Nöth, Elmar},
+  booktitle={ICASSP 2022 - 2022 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)}, 
+  title={ORCA-PARTY: An Automatic Killer Whale Sound Type Separation Toolkit Using Deep Learning}, 
+  year={2022},
+  pages={1046-1050},
+  doi={10.1109/ICASSP43922.2022.9746623}}
 }
 ```
 ## License
